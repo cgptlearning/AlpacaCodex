@@ -36,6 +36,7 @@ class Scanner:
         self.volume: Dict[str, int] = defaultdict(int)
         self.watchlist: List[WatchItem] = []
         self.running = False
+        self.last_signal: str | None = None
 
     async def start(self) -> None:
         """Subscribe to trade updates and start processing."""
@@ -43,7 +44,16 @@ class Scanner:
         for symbol in self.dm.low_float_assets.keys():
             self.stream.subscribe_trades(self._on_trade, symbol)
         logging.info("Starting stream for %d symbols", len(self.dm.low_float_assets))
-        await self.stream.run()
+        try:
+            await self.stream.run()
+        finally:
+            await self.stop()
+
+    async def stop(self) -> None:
+        if self.running:
+            self.running = False
+            await self.stream.stop_ws()
+            await self.stream.close()
 
     async def _on_trade(self, trade: Trade):
         symbol = trade.symbol
@@ -84,5 +94,7 @@ class Scanner:
         if not self.watchlist:
             return
         top = self.watchlist[0]
-        await self.trade_callback(top.symbol, self.hod[top.symbol])
+        if top.symbol != self.last_signal:
+            self.last_signal = top.symbol
+            await self.trade_callback(top.symbol, self.hod[top.symbol])
 

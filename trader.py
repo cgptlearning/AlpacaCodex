@@ -51,3 +51,11 @@ class Trader:
         except Exception as exc:
             logging.error("Order submission failed for %s: %s", symbol, exc)
 
+    def remove_position(self, symbol: str) -> None:
+        """Remove symbol from tracked open positions."""
+        self.open_positions.pop(symbol, None)
+
+    def clear_positions(self) -> None:
+        """Reset all tracked positions."""
+        self.open_positions.clear()
+

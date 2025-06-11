@@ -18,6 +18,7 @@ async def main() -> None:
     await dm.morning_prep()
 
     trader = Trader(dm.trading_client)
+    trader.clear_positions()
 
     async def trade_callback(symbol: str, hod_price: float):
         await trader.submit_trade(symbol, hod_price)
@@ -27,6 +28,7 @@ async def main() -> None:
     try:
         await scanner.start()
     finally:
+        await scanner.stop()
         await dm.close()
 
 
