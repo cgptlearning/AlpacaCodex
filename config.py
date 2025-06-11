@@ -11,9 +11,20 @@ DATA_STREAM_URL = 'wss://stream.data.alpaca.markets/v2/sip'
 
 
 # Risk management and scanner parameters
-POSITION_SIZE = 1000  # dollars per trade
+POSITION_SIZE = 1000  # dollars per trade (used if SIZE_EQUITY_PCT == 0)
 STOP_LOSS_PCT = 0.025
 TAKE_PROFIT_PCT = 0.05
+
+# Daily loss and position limits
+MAX_DAILY_LOSS = 1000  # dollars
+MAX_POSITIONS = 5
+
+# Dynamic position sizing
+# If SIZE_EQUITY_PCT > 0, position size will be calculated as a percentage of
+# current account equity. Otherwise POSITION_SIZE is used.
+SIZE_EQUITY_PCT = 0.01  # 1% of equity per trade
+USE_VOLATILITY_ADJUST = False  # scale size by VOLATILITY_TARGET / asset_vol
+VOLATILITY_TARGET = 0.02  # target daily vol used when adjusting by volatility
 
 LOW_FLOAT_THRESHOLD = 10_000_000
 MIN_PRICE = 2.0
