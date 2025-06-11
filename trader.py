@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
-import time
 from typing import Dict
 
 from alpaca.trading.client import TradingClient
@@ -47,7 +47,7 @@ class Trader:
         )
         for attempt in range(3):
             try:
-                res = self.client.submit_order(order)
+                res = await asyncio.to_thread(self.client.submit_order, order)
                 self.open_positions[symbol] = entry_price
                 logging.info("Submitted bracket order for %s: %s", symbol, res.id)
                 return
@@ -59,7 +59,7 @@ class Trader:
                         attempt + 1,
                         exc,
                     )
-                    time.sleep(2)
+                    await asyncio.sleep(2)
                 else:
                     logging.error(
                         "Order submission failed for %s after 3 attempts: %s",

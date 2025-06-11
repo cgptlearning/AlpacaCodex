@@ -63,7 +63,7 @@ class DataManager:
             return await asyncio.to_thread(self._sync_fetch_asset_info, symbol)
 
     def _sync_fetch_asset_info(self, symbol: str):
-        for attempt in range(3):
+        for attempt in range(1, 4):
             try:
                 bars_req = StockBarsRequest(
                     symbol_or_symbols=symbol, timeframe=TimeFrame.Day, limit=50
@@ -77,11 +77,11 @@ class DataManager:
                     symbol=symbol, prev_close=prev_close, avg_volume=avg_volume
                 )
             except Exception as exc:
-                if attempt < 2:
+                if attempt < 3:
                     logging.warning(
                         "Data request failed for %s (attempt %d): %s",
                         symbol,
-                        attempt + 1,
+                        attempt,
                         exc,
                     )
                     time.sleep(2)
