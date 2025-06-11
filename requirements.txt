@@ -1,2 +1,2 @@
 alpaca-py>=0.7.0
-aiohttp
+yfinance
