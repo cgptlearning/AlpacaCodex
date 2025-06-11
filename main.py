@@ -15,16 +15,16 @@ async def main() -> None:
     )
 
     dm = DataManager()
-    await dm.morning_prep()
-
-    trader = Trader(dm.trading_client)
-
-    async def trade_callback(symbol: str, hod_price: float):
-        await trader.submit_trade(symbol, hod_price)
-
-    scanner = Scanner(dm, trade_callback)
-
     try:
+        await dm.morning_prep()
+
+        trader = Trader(dm.trading_client)
+
+        async def trade_callback(symbol: str, hod_price: float):
+            await trader.submit_trade(symbol, hod_price)
+
+        scanner = Scanner(dm, trade_callback)
+
         await scanner.start()
     finally:
         await dm.close()

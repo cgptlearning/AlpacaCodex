@@ -31,7 +31,7 @@ class DataManager:
             config.ALPACA_API_KEY,
             config.ALPACA_SECRET_KEY,
             paper=True,
-            url=config.BASE_URL,
+            url_override=config.BASE_URL,
         )
         self.data_client = StockHistoricalDataClient(
             config.ALPACA_API_KEY, config.ALPACA_SECRET_KEY
@@ -42,7 +42,7 @@ class DataManager:
     async def morning_prep(self) -> None:
         """Builds the low float universe and retrieves averages."""
         logging.info("Starting morning prep")
-        assets = self.trading_client.get_assets()
+        assets = self.trading_client.get_all_assets()
         symbols = [
             a.symbol
             for a in assets
