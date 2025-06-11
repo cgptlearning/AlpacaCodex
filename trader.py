@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Dict
 
 from alpaca.trading.client import TradingClient
@@ -44,12 +45,27 @@ class Trader:
                 stop_price=round(entry_price * (1 - config.STOP_LOSS_PCT), 2)
             ),
         )
-        try:
-            res = self.client.submit_order(order)
-            self.open_positions[symbol] = entry_price
-            logging.info("Submitted bracket order for %s: %s", symbol, res.id)
-        except Exception as exc:
-            logging.error("Order submission failed for %s: %s", symbol, exc)
+        for attempt in range(3):
+            try:
+                res = self.client.submit_order(order)
+                self.open_positions[symbol] = entry_price
+                logging.info("Submitted bracket order for %s: %s", symbol, res.id)
+                return
+            except Exception as exc:
+                if attempt < 2:
+                    logging.warning(
+                        "Order submission failed for %s (attempt %d): %s",
+                        symbol,
+                        attempt + 1,
+                        exc,
+                    )
+                    time.sleep(2)
+                else:
+                    logging.error(
+                        "Order submission failed for %s after 3 attempts: %s",
+                        symbol,
+                        exc,
+                    )
 
     def remove_position(self, symbol: str) -> None:
         """Remove symbol from tracked open positions."""
@@ -58,4 +74,3 @@ class Trader:
     def clear_positions(self) -> None:
         """Reset all tracked positions."""
         self.open_positions.clear()
-
