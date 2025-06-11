@@ -7,6 +7,8 @@ A simple trading bot that scans low-float stocks using Alpaca's live data.
    defined in `config.py`.
 2. Start the bot with `python main.py`. It loads the CSV, retrieves historical
    averages from Alpaca and begins streaming trade data for the filtered list.
+3. Order IDs are stored when trades are placed and stale positions are cleaned
+   up automatically.
 
 ## Warning
 
