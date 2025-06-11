@@ -1,8 +1,11 @@
 # Configuration for the trading bot
 
 # Alpaca API credentials
-ALPACA_API_KEY = 'YOUR_ALPACA_API_KEY'
-ALPACA_SECRET_KEY = 'YOUR_ALPACA_SECRET_KEY'
+import os
+
+# Keys are loaded from environment variables so secrets aren't hardcoded
+ALPACA_API_KEY = os.getenv("ALPACA_API_KEY")
+ALPACA_SECRET_KEY = os.getenv("ALPACA_SECRET_KEY")
 BASE_URL = 'https://paper-api.alpaca.markets'
 DATA_STREAM_URL = 'wss://stream.data.alpaca.markets/v2/sip'
 

@@ -8,6 +8,15 @@ A simple trading bot that scans low-float stocks using Alpaca's live data.
 2. Start the bot with `python main.py`. It loads the CSV, retrieves historical
    averages from Alpaca and begins streaming trade data for the filtered list.
 
+## Environment Variables
+
+Set the following variables before running any of the scripts:
+
+- `ALPACA_API_KEY` – your Alpaca API key
+- `ALPACA_SECRET_KEY` – your Alpaca secret key
+
+`config.py` reads these values from the environment at runtime.
+
 ## Warning
 
 This project executes live orders if valid API keys are supplied. It is meant
