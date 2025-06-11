@@ -6,6 +6,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from typing import Dict
+import statistics
 
 import csv
 from alpaca.data.historical import StockHistoricalDataClient
@@ -21,6 +22,7 @@ class AssetInfo:
     symbol: str
     prev_close: float
     avg_volume: float
+    volatility: float
 
 
 class DataManager:
@@ -65,7 +67,14 @@ class DataManager:
                 return None
             avg_volume = sum(b.v for b in bars) / len(bars)
             prev_close = bars[-1].c
-            return AssetInfo(symbol=symbol, prev_close=prev_close, avg_volume=avg_volume)
+            returns = [(bars[i].c / bars[i-1].c) - 1 for i in range(1, len(bars))]
+            volatility = (statistics.stdev(returns) if len(returns) > 1 else 0)
+            return AssetInfo(
+                symbol=symbol,
+                prev_close=prev_close,
+                avg_volume=avg_volume,
+                volatility=volatility,
+            )
         except Exception as exc:
             logging.error("Data request failed for %s: %s", symbol, exc)
             return None

@@ -7,6 +7,8 @@ A simple trading bot that scans low-float stocks using Alpaca's live data.
    defined in `config.py`.
 2. Start the bot with `python main.py`. It loads the CSV, retrieves historical
    averages from Alpaca and begins streaming trade data for the filtered list.
+   Risk controls such as a daily loss limit, maximum open positions and
+   optional dynamic position sizing can be configured in `config.py`.
 
 ## Warning
 

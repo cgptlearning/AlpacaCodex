@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Dict
 
+from datamanager import DataManager
+
 from alpaca.trading.client import TradingClient
 from alpaca.trading.enums import OrderSide, OrderType, TimeInForce
 from alpaca.trading.requests import (
@@ -18,18 +20,48 @@ import config
 
 
 class Trader:
-    def __init__(self, trading_client: TradingClient) -> None:
+    def __init__(self, trading_client: TradingClient, data_manager: DataManager) -> None:
         self.client = trading_client
+        self.dm = data_manager
         self.open_positions: Dict[str, float] = {}
+        try:
+            self.start_equity = float(self.client.get_account().equity)
+        except Exception:
+            self.start_equity = 0.0
 
-    def _position_size(self, price: float) -> int:
-        qty = int(config.POSITION_SIZE / price)
+    def _position_size(self, symbol: str, price: float) -> int:
+        try:
+            account = self.client.get_account()
+            trade_value = config.POSITION_SIZE
+            if config.SIZE_EQUITY_PCT > 0:
+                trade_value = float(account.equity) * config.SIZE_EQUITY_PCT
+            if config.USE_VOLATILITY_ADJUST:
+                info = self.dm.low_float_assets.get(symbol)
+                if info and info.volatility:
+                    trade_value *= config.VOLATILITY_TARGET / max(info.volatility, 1e-6)
+            qty = int(trade_value / price)
+        except Exception:
+            qty = int(config.POSITION_SIZE / price)
         return max(qty, 1)
+
+    def _loss_limit_reached(self) -> bool:
+        try:
+            equity = float(self.client.get_account().equity)
+            return self.start_equity - equity >= config.MAX_DAILY_LOSS
+        except Exception:
+            return False
 
     async def submit_trade(self, symbol: str, entry_price: float) -> None:
         if symbol in self.open_positions:
             return
-        qty = self._position_size(entry_price)
+        if len(self.open_positions) >= config.MAX_POSITIONS:
+            logging.info("Max open positions reached")
+            return
+        if self._loss_limit_reached():
+            logging.warning("Daily loss limit reached; trade blocked")
+            return
+
+        qty = self._position_size(symbol, entry_price)
         order = OrderRequest(
             symbol=symbol,
             qty=qty,

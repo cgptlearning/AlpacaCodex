@@ -17,7 +17,7 @@ async def main() -> None:
     dm = DataManager()
     await dm.morning_prep()
 
-    trader = Trader(dm.trading_client)
+    trader = Trader(dm.trading_client, dm)
     trader.clear_positions()
 
     async def trade_callback(symbol: str, hod_price: float):
