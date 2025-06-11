@@ -71,5 +71,14 @@ class DataManager:
             return None
 
     async def close(self) -> None:
-        pass
+        """Cleanup underlying network sessions."""
+        try:
+            self.trading_client._session.close()
+        except Exception as exc:  # defensive - library may change internals
+            logging.error("Failed to close TradingClient session: %s", exc)
+
+        try:
+            self.data_client._session.close()
+        except Exception as exc:
+            logging.error("Failed to close DataClient session: %s", exc)
 
