@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Dict
 
@@ -45,7 +46,7 @@ class Trader:
             ),
         )
         try:
-            res = self.client.submit_order(order)
+            res = await asyncio.to_thread(self.client.submit_order, order)
             self.open_positions[symbol] = entry_price
             logging.info("Submitted bracket order for %s: %s", symbol, res.id)
         except Exception as exc:
