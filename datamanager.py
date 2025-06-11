@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from dataclasses import dataclass
 from typing import Dict
 
@@ -43,14 +44,18 @@ class DataManager:
         with open("low_float_stocks.csv", newline="") as f:
             reader = csv.DictReader(f)
             symbols = [row["symbol"] for row in reader]
+        logging.info("Loaded %d symbols", len(symbols))
 
         sem = asyncio.Semaphore(20)
         tasks = [self._fetch_asset_info(symbol, sem) for symbol in symbols]
         results = await asyncio.gather(*tasks, return_exceptions=True)
+        success = 0
         for res in results:
             if isinstance(res, AssetInfo):
                 self.low_float_assets[res.symbol] = res
-        logging.info("Morning prep complete: %s stocks", len(self.low_float_assets))
+                success += 1
+        failures = len(results) - success
+        logging.info("Morning prep complete: %d loaded, %d failed", success, failures)
 
     async def _fetch_asset_info(self, symbol: str, sem: asyncio.Semaphore):
         """Retrieve historical bars and build AssetInfo."""
@@ -58,18 +63,33 @@ class DataManager:
             return await asyncio.to_thread(self._sync_fetch_asset_info, symbol)
 
     def _sync_fetch_asset_info(self, symbol: str):
-        try:
-            bars_req = StockBarsRequest(symbol_or_symbols=symbol, timeframe=TimeFrame.Day, limit=50)
-            bars = self.data_client.get_stock_bars(bars_req).data.get(symbol)
-            if not bars:
-                return None
-            avg_volume = sum(b.v for b in bars) / len(bars)
-            prev_close = bars[-1].c
-            return AssetInfo(symbol=symbol, prev_close=prev_close, avg_volume=avg_volume)
-        except Exception as exc:
-            logging.error("Data request failed for %s: %s", symbol, exc)
-            return None
+        for attempt in range(3):
+            try:
+                bars_req = StockBarsRequest(
+                    symbol_or_symbols=symbol, timeframe=TimeFrame.Day, limit=50
+                )
+                bars = self.data_client.get_stock_bars(bars_req).data.get(symbol)
+                if not bars:
+                    return None
+                avg_volume = sum(b.v for b in bars) / len(bars)
+                prev_close = bars[-1].c
+                return AssetInfo(
+                    symbol=symbol, prev_close=prev_close, avg_volume=avg_volume
+                )
+            except Exception as exc:
+                if attempt < 2:
+                    logging.warning(
+                        "Data request failed for %s (attempt %d): %s",
+                        symbol,
+                        attempt + 1,
+                        exc,
+                    )
+                    time.sleep(2)
+                else:
+                    logging.error(
+                        "Data request failed for %s after 3 attempts: %s", symbol, exc
+                    )
+        return None
 
     async def close(self) -> None:
         pass
-
