@@ -7,6 +7,7 @@ import logging
 import time
 from dataclasses import dataclass
 from typing import Dict
+import statistics
 
 import csv
 from alpaca.data.historical import StockHistoricalDataClient
@@ -22,6 +23,7 @@ class AssetInfo:
     symbol: str
     prev_close: float
     avg_volume: float
+    volatility: float
 
 
 class DataManager:
@@ -66,15 +68,25 @@ class DataManager:
         for attempt in range(1, 4):
             try:
                 bars_req = StockBarsRequest(
-                    symbol_or_symbols=symbol, timeframe=TimeFrame.Day, limit=50
+                    symbol_or_symbols=symbol,
+                    timeframe=TimeFrame.Day,
+                    limit=50,
                 )
                 bars = self.data_client.get_stock_bars(bars_req).data.get(symbol)
                 if not bars:
                     return None
                 avg_volume = sum(b.v for b in bars) / len(bars)
                 prev_close = bars[-1].c
+                returns = [
+                    (bars[i].c / bars[i - 1].c) - 1
+                    for i in range(1, len(bars))
+                ]
+                volatility = statistics.stdev(returns) if len(returns) > 1 else 0
                 return AssetInfo(
-                    symbol=symbol, prev_close=prev_close, avg_volume=avg_volume
+                    symbol=symbol,
+                    prev_close=prev_close,
+                    avg_volume=avg_volume,
+                    volatility=volatility,
                 )
             except Exception as exc:
                 if attempt < 3:
@@ -87,9 +99,21 @@ class DataManager:
                     time.sleep(2)
                 else:
                     logging.error(
-                        "Data request failed for %s after 3 attempts: %s", symbol, exc
+                        "Data request failed for %s after 3 attempts: %s",
+                        symbol,
+                        exc,
                     )
         return None
 
     async def close(self) -> None:
-        pass
+        """Cleanup underlying network sessions."""
+        try:
+            self.trading_client._session.close()
+        except Exception as exc:  # defensive - library may change internals
+            logging.error("Failed to close TradingClient session: %s", exc)
+
+        try:
+            self.data_client._session.close()
+        except Exception as exc:
+            logging.error("Failed to close DataClient session: %s", exc)
+
