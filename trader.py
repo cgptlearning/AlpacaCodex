@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
+from dataclasses import dataclass
 from typing import Dict
 
 from alpaca.trading.client import TradingClient
@@ -17,10 +19,18 @@ from alpaca.trading.requests import (
 import config
 
 
+@dataclass
+class PositionInfo:
+    """Tracked details for an open order."""
+
+    order_id: str
+    entry_price: float
+
+
 class Trader:
     def __init__(self, trading_client: TradingClient) -> None:
         self.client = trading_client
-        self.open_positions: Dict[str, float] = {}
+        self.open_positions: Dict[str, PositionInfo] = {}
 
     def _position_size(self, price: float) -> int:
         qty = int(config.POSITION_SIZE / price)
@@ -46,7 +56,7 @@ class Trader:
         )
         try:
             res = self.client.submit_order(order)
-            self.open_positions[symbol] = entry_price
+            self.open_positions[symbol] = PositionInfo(order_id=res.id, entry_price=entry_price)
             logging.info("Submitted bracket order for %s: %s", symbol, res.id)
         except Exception as exc:
             logging.error("Order submission failed for %s: %s", symbol, exc)
@@ -58,4 +68,18 @@ class Trader:
     def clear_positions(self) -> None:
         """Reset all tracked positions."""
         self.open_positions.clear()
+
+    async def monitor_positions(self, poll_interval: int = 60) -> None:
+        """Periodically refresh open positions and drop filled orders."""
+        while True:
+            await asyncio.sleep(poll_interval)
+            try:
+                orders = self.client.get_orders(status="open")
+                open_ids = {o.id for o in orders}
+                stale = [sym for sym, info in self.open_positions.items() if info.order_id not in open_ids]
+                for sym in stale:
+                    logging.info("Removing closed position %s", sym)
+                    self.remove_position(sym)
+            except Exception as exc:
+                logging.error("Position update failed: %s", exc)
 

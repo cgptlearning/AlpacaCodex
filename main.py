@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import contextlib
 
 import config
 from datamanager import DataManager
@@ -19,6 +20,7 @@ async def main() -> None:
 
     trader = Trader(dm.trading_client)
     trader.clear_positions()
+    position_task = asyncio.create_task(trader.monitor_positions())
 
     async def trade_callback(symbol: str, hod_price: float):
         await trader.submit_trade(symbol, hod_price)
@@ -28,6 +30,9 @@ async def main() -> None:
     try:
         await scanner.start()
     finally:
+        position_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await position_task
         await scanner.stop()
         await dm.close()
 
